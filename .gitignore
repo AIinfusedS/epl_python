@@ -1,0 +1,61 @@
+# OS / Editor
+.DS_Store
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.pkl
+*.pickle
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+
+# Project outputs (large or generated)
+data/
+!data/.gitkeep
+models/
+!models/.gitkeep
+checkpoints/
+runs/
+
+# Sessions / secrets / sqlite
+*.session
+*.sqlite*
+*.db
+*.log
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Caches and locks
+.cache/
+*.lock# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+*.env
+
+# Telethon session files
+*.session
+*.session-journal
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store

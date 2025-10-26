@@ -1,0 +1,103 @@
+# Keyword tag configuration
+# Each tag has a list of case-insensitive substrings or regex patterns (prefix with re:)
+# Messages matching ANY pattern for a tag are labeled with that tag.
+
+score_update:
+  - "FT"
+  - "full time"
+  - "final score"
+  - "HT"
+  - "half time"
+  - "kick-off"
+  - "kick off"
+
+transfer:
+  - "transfer"
+  - "signs"
+  - "signed"
+  - "loan"
+  - "contract"
+  - "deal"
+
+injury:
+  - "injury"
+  - "injured"
+  - "out for"
+  - "ruled out"
+
+match_highlight:
+  - "goal"
+  - "scores"
+  - "assist"
+  - "penalty"
+  - "VAR"
+  - "red card"
+  - "yellow card"
+
+club_arsenal:
+  - "Arsenal"
+club_manchester_city:
+  - "Manchester City"
+club_manchester_united:
+  - "Manchester United"
+club_chelsea:
+  - "Chelsea"
+club_liverpool:
+  - "Liverpool"
+club_tottenham:
+  - "Tottenham"
+club_newcastle:
+  - "Newcastle"
+club_west_ham:
+  - "West Ham"
+club_brighton:
+  - "Brighton"
+club_aston_villa:
+  - "Aston Villa"
+club_everton:
+  - "Everton"
+club_crystal_palace:
+  - "Crystal Palace"
+  - "Palace"
+club_bournemouth:
+  - "Bournemouth"
+  - "AFC Bournemouth"
+club_brentford:
+  - "Brentford"
+club_fulham:
+  - "Fulham"
+club_nottingham_forest:
+  - "Nottingham Forest"
+  - "Forest"
+club_wolves:
+  - "Wolves"
+  - "Wolverhampton"
+club_burnley:
+  - "Burnley"
+club_southampton:
+  - "Southampton"
+  - "Saints"
+club_leicester_city:
+  - "Leicester"
+  - "Leicester City"
+club_leeds_united:
+  - "Leeds"
+  - "Leeds United"
+club_sheffield_united:
+  - "Sheffield United"
+  - "Sheff Utd"
+club_west_bromwich_albion:
+  - "West Brom"
+  - "West Bromwich"
+club_ipswich_town:
+  - "Ipswich"
+  - "Ipswich Town"
+club_portsmouth:
+  - "Portsmouth"
+  - "Pompey"
+club_hull_city:
+  - "Hull"
+  - "Hull City"
+club_middlesbrough:
+  - "Middlesbrough"
+  - "Boro"
