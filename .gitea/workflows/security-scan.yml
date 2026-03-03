@@ -1,0 +1,43 @@
+# Security scanning workflow — rendered from security-scan.yml.tpl
+# Runs Semgrep, Trivy, and Gitleaks on every pull request.
+# Each job reports as a status check for branch protection.
+
+name: Security Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  semgrep:
+    name: Semgrep SAST
+    runs-on: linux
+    container:
+      image: returntocorp/semgrep:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Semgrep
+        run: semgrep scan --config auto --error .
+
+  trivy:
+    name: Trivy Vulnerability Scan
+    runs-on: linux
+    container:
+      image: aquasec/trivy:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy filesystem scan
+        run: trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+
+  gitleaks:
+    name: Gitleaks Secret Detection
+    runs-on: linux
+    container:
+      image: zricethezav/gitleaks:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        run: gitleaks detect --source . --exit-code 1
