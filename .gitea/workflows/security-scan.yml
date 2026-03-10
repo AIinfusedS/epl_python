@@ -12,7 +12,7 @@ on:
 jobs:
   semgrep:
     name: Semgrep SAST
-    runs-on: linux
+    runs-on: gitea-bare
     container:
       image: returntocorp/semgrep:latest
     steps:
@@ -22,7 +22,7 @@ jobs:
 
   trivy:
     name: Trivy Vulnerability Scan
-    runs-on: linux
+    runs-on: gitea-bare
     container:
       image: aquasec/trivy:latest
     steps:
@@ -32,7 +32,7 @@ jobs:
 
   gitleaks:
     name: Gitleaks Secret Detection
-    runs-on: linux
+    runs-on: gitea-bare
     container:
       image: zricethezav/gitleaks:latest
     steps:
