@@ -89,7 +89,7 @@ jobs:
           set -eu
           cd repo
           export SEMGREP_ENABLE_VERSION_CHECK=0
-          semgrep scan --config auto --metrics=off --error .
+          semgrep scan --config auto --error .
 
   trivy:
     name: Trivy Vulnerability Scan
