@@ -1,6 +1,6 @@
-# Security scanning workflow — rendered from security-scan.yml.tpl
-# Runs Semgrep, Trivy, and Gitleaks on every pull request.
-# Each job reports as a status check for branch protection.
+# Security scanning workflow — runs on the gitea-bare lane.
+# Uses tool-specific containers and fetches the PR source archive directly
+# from Gitea so scans do not depend on external action repositories.
 
 name: Security Scan
 
@@ -12,32 +12,161 @@ on:
 jobs:
   semgrep:
     name: Semgrep SAST
-    runs-on: linux
+    runs-on: gitea-bare
     container:
-      image: returntocorp/semgrep:latest
+      image: semgrep/semgrep:1.154.0
     steps:
-      - uses: actions/checkout@v4
+      - name: Download source archive
+        env:
+          ARCHIVE_TOKEN: ${{ gitea.token }}
+          SERVER_URL: ${{ gitea.server_url }}
+          REPOSITORY: ${{ gitea.repository }}
+          SHA: ${{ gitea.sha }}
+        run: |
+          set -eu
+          sanitize_context_value() {
+            raw="$1"
+            case "$raw" in
+              '%!t(string='*')')
+                raw="${raw#%\!t(string=}"
+                raw="${raw%)}"
+                ;;
+            esac
+            printf '%s' "$raw"
+          }
+          ARCHIVE_TOKEN="$(sanitize_context_value "$ARCHIVE_TOKEN")"
+          SERVER_URL="$(sanitize_context_value "$SERVER_URL")"
+          REPOSITORY="$(sanitize_context_value "$REPOSITORY")"
+          SHA="$(sanitize_context_value "$SHA")"
+          case "$SERVER_URL" in
+            *://gitea:*|*://localhost:*|*://127.0.0.1:*) SERVER_URL="https://source.privacyindesign.com" ;;
+          esac
+          ARCHIVE_URL="${SERVER_URL%/}/api/v1/repos/${REPOSITORY}/archive/${SHA}.tar.gz"
+          export ARCHIVE_URL
+          python3 - <<'PY'
+          import io
+          import os
+          import shutil
+          import tarfile
+          import urllib.request
+          from pathlib import Path
+
+          archive_url = os.environ["ARCHIVE_URL"]
+          archive_token = os.environ["ARCHIVE_TOKEN"]
+          request = urllib.request.Request(
+              archive_url,
+              headers={"Authorization": f"token {archive_token}"},
+          )
+          with urllib.request.urlopen(request) as response:
+              payload = response.read()
+
+          repo_dir = Path("repo")
+          repo_dir.mkdir(exist_ok=True)
+          repo_root = repo_dir.resolve()
+          with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
+              for member in archive.getmembers():
+                  parts = Path(member.name).parts
+                  if len(parts) <= 1:
+                      continue
+                  relative_path = Path(*parts[1:])
+                  target_path = (repo_dir / relative_path).resolve()
+                  if target_path != repo_root and repo_root not in target_path.parents:
+                      raise RuntimeError(f"Refusing to extract outside repo: {relative_path}")
+                  if member.isdir():
+                      target_path.mkdir(parents=True, exist_ok=True)
+                      continue
+                  if member.issym() or member.islnk():
+                      raise RuntimeError(f"Refusing to extract link member: {relative_path}")
+                  target_path.parent.mkdir(parents=True, exist_ok=True)
+                  extracted = archive.extractfile(member)
+                  if extracted is None:
+                      continue
+                  with extracted, target_path.open("wb") as handle:
+                      shutil.copyfileobj(extracted, handle)
+          PY
       - name: Run Semgrep
-        run: semgrep scan --config auto --error .
+        run: |
+          set -eu
+          cd repo
+          export SEMGREP_ENABLE_VERSION_CHECK=0
+          semgrep scan --config auto --error .
 
   trivy:
     name: Trivy Vulnerability Scan
-    runs-on: linux
+    runs-on: gitea-bare
     container:
-      image: aquasec/trivy:latest
+      image: aquasec/trivy:0.63.0
     steps:
-      - uses: actions/checkout@v4
       - name: Run Trivy filesystem scan
-        run: trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+        env:
+          ARCHIVE_TOKEN: ${{ gitea.token }}
+          SERVER_URL: ${{ gitea.server_url }}
+          REPOSITORY: ${{ gitea.repository }}
+          SHA: ${{ gitea.sha }}
+        run: |
+          set -eu
+          sanitize_context_value() {
+            raw="$1"
+            case "$raw" in
+              '%!t(string='*')')
+                raw="${raw#%\!t(string=}"
+                raw="${raw%)}"
+                ;;
+            esac
+            printf '%s' "$raw"
+          }
+          ARCHIVE_TOKEN="$(sanitize_context_value "$ARCHIVE_TOKEN")"
+          SERVER_URL="$(sanitize_context_value "$SERVER_URL")"
+          REPOSITORY="$(sanitize_context_value "$REPOSITORY")"
+          SHA="$(sanitize_context_value "$SHA")"
+          case "$SERVER_URL" in
+            *://gitea:*|*://localhost:*|*://127.0.0.1:*) SERVER_URL="https://source.privacyindesign.com" ;;
+          esac
+          ARCHIVE_URL="${SERVER_URL%/}/api/v1/repos/${REPOSITORY}/archive/${SHA}.tar.gz"
+          mkdir -p /tmp/repo
+          wget -qO- --header="Authorization: token ${ARCHIVE_TOKEN}" "${ARCHIVE_URL}" \
+            | tar xz --strip-components=1 -C /tmp/repo
+          trivy fs \
+            --db-repository docker.io/aquasec/trivy-db \
+            --java-db-repository docker.io/aquasec/trivy-java-db \
+            --exit-code 1 \
+            --severity HIGH,CRITICAL \
+            /tmp/repo
 
   gitleaks:
     name: Gitleaks Secret Detection
-    runs-on: linux
+    runs-on: gitea-bare
     container:
-      image: zricethezav/gitleaks:latest
+      image: zricethezav/gitleaks:v8.24.2
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Prepare source archive
+        env:
+          ARCHIVE_TOKEN: ${{ gitea.token }}
+          SERVER_URL: ${{ gitea.server_url }}
+          REPOSITORY: ${{ gitea.repository }}
+          SHA: ${{ gitea.sha }}
+        run: |
+          set -eu
+          sanitize_context_value() {
+            raw="$1"
+            case "$raw" in
+              '%!t(string='*')')
+                raw="${raw#%\!t(string=}"
+                raw="${raw%)}"
+                ;;
+            esac
+            printf '%s' "$raw"
+          }
+          ARCHIVE_TOKEN="$(sanitize_context_value "$ARCHIVE_TOKEN")"
+          SERVER_URL="$(sanitize_context_value "$SERVER_URL")"
+          REPOSITORY="$(sanitize_context_value "$REPOSITORY")"
+          SHA="$(sanitize_context_value "$SHA")"
+          case "$SERVER_URL" in
+            *://gitea:*|*://localhost:*|*://127.0.0.1:*) SERVER_URL="https://source.privacyindesign.com" ;;
+          esac
+          ARCHIVE_URL="${SERVER_URL%/}/api/v1/repos/${REPOSITORY}/archive/${SHA}.tar.gz"
+          mkdir -p /tmp/repo
+          wget -qO- --header="Authorization: token ${ARCHIVE_TOKEN}" "${ARCHIVE_URL}" \
+            | tar xz --strip-components=1 -C /tmp/repo
       - name: Run Gitleaks
-        run: gitleaks detect --source . --exit-code 1
+        run: gitleaks dir /tmp/repo --exit-code 1 --no-banner
